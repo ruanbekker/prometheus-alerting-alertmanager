@@ -1,0 +1,49 @@
+{
+  "family": "deadmanswitch",
+  "executionRoleArn":"arn:aws:iam::000000000000:role/ecs-execution-role",
+  "taskRoleArn":"arn:aws:iam::000000000000:role/ecs-task-role",
+  "containerDefinitions": [
+    {
+      "name": "deadmanswitch",
+      "image": "ruanbekker/cole-deadmanswitch:0.2.0",
+      "memoryReservation": 64,
+      "portMappings":[
+        {
+          "protocol":"tcp",
+          "containerPort":8080,
+          "hostPort":0
+        }
+      ],
+      "environment": [
+        {
+          "name": "SENDER_TYPE",
+          "value": "slack"
+        },
+        {
+          "name": "SLACK_CHANNEL",
+          "value": "#system-events"
+        },
+        {
+          "name": "SLACK_ICON",
+          "value": ":fire:"
+        },
+        {
+          "name": "SLACK_USERNAME",
+          "value": "DeadManSwitch Monitor"
+        },
+        {
+          "name": "INTERVAL",
+          "value": "300"
+        }
+      ],
+      "secrets": [
+        {
+          "valueFrom": "arn:aws:ssm:eu-west-1:000000000000:parameter/deadmanswitch/tooling/SLACK_WEBHOOK_URL",
+          "name": "HTTP_ENDPOINT"
+        }
+      ],
+      "essential": true,
+      "privileged": true
+    }
+  ]
+}
