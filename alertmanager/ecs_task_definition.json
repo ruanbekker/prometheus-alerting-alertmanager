@@ -1,0 +1,49 @@
+{
+  "family": "alertmanager",
+  "executionRoleArn":"arn:aws:iam::000000000000:role/ecs-execution-role",
+  "taskRoleArn":"arn:aws:iam::000000000000:role/ecs-task-role",
+  "containerDefinitions": [
+    {
+      "name": "alertmanager",
+      "image": "000000000000.dkr.ecr.eu-west-1.amazonaws.com/alertmanager:v0.21.0-xxxxxx",
+      "memoryReservation": 128,
+      "portMappings":[
+        {
+          "protocol":"tcp",
+          "containerPort":9093,
+          "hostPort":0
+        }
+      ],
+      "environment": [
+        {
+          "name": "AWS_DEFAULT_REGION",
+          "value": "eu-west-1"
+        },
+        {
+          "name": "ALERTMANAGER_URL",
+          "value": "https://alertmanager.mydomain.com"
+        }
+      ],
+      "secrets": [
+        {
+          "valueFrom": "arn:aws:ssm:eu-west-1:000000000000:parameter/alertmanager/tooling/SLACK_WEBHOOK_URL",
+          "name": "SLACK_WEBHOOK_URL"
+        },
+        {
+          "valueFrom": "arn:aws:ssm:eu-west-1:000000000000:parameter/alertmanager/tooling/DEVOPS_OPSGENIE_API_KEY",
+          "name": "DEVOPS_OPSGENIE_API_KEY"
+        },
+        {
+          "valueFrom": "arn:aws:ssm:eu-west-1:000000000000:parameter/alertmanager/tooling/SUPPORT_OPSGENIE_API_KEY",
+          "name": "SUPPORT_OPSGENIE_API_KEY"
+        },
+        {
+          "valueFrom": "arn:aws:ssm:eu-west-1:000000000000:parameter/alertmanager/tooling/DATA_OPSGENIE_API_KEY",
+          "name": "DATA_OPSGENIE_API_KEY"
+        }
+      ],
+      "essential": true,
+      "privileged": true
+    }
+  ]
+}
