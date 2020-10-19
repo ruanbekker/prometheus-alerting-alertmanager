@@ -1,0 +1,18 @@
+groups:
+- name: deadmanswitch.rules
+  rules:
+  # allows us to trigger an alert when our Prometheus cluster is no longer functioning correctly.
+  # https://jpweber.io/blog/taking-advantage-of-deadmans-switch-in-prometheus/
+  - alert: DeadManSwitch
+    expr: vector(1)
+    labels:
+      severity: warning
+      team: devops
+    annotations:
+      title: "DeadManSwitch"
+      summary: Alerting DeadManSwitch
+      description: This is a DeadManSwitch meant to ensure that the entire Alerting pipeline is functional.
+      impact: Alerting is down
+      action: Follow runbook and determine why prometheus isnt working
+      dashboard: https://grafana.localdns.xyz/d/X1g3hSYgk/prometheus-alertmanager?orgId=1&refresh=5s
+      runbook: https://wiki.localdns.xyz/books/runbooks/DeadManSwitch
