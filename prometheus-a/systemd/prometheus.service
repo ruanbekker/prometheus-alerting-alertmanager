@@ -1,0 +1,28 @@
+[Unit]
+Description=Prometheus
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=500
+StartLimitBurst=5
+
+[Service]
+User=prometheus
+Group=prometheus
+Type=simple
+Restart=on-failure
+RestartSec=5s
+ExecStartPre=/bin/sleep 10
+ExecStart=/usr/local/bin/prometheus \
+    --config.file /etc/prometheus/prometheus.yml \
+    --storage.tsdb.path /var/lib/prometheus/ \
+    --storage.tsdb.min-block-duration=2h \
+    --storage.tsdb.max-block-duration=2h \
+    --web.console.templates=/etc/prometheus/consoles \
+    --web.console.libraries=/etc/prometheus/console_libraries \
+    --web.external-url=https://thanos-query-prod.localdns.xyz \
+    --web.listen-address=:9090 \
+    --web.enable-lifecycle \
+    --web.enable-admin-api
+
+[Install]
+WantedBy=multi-user.target
