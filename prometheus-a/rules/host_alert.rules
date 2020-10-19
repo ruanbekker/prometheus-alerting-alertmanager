@@ -1,0 +1,52 @@
+groups:
+- name: host_alert.rules
+  rules:
+
+  # Alert for any node that is unreachable for > 2 minutes.
+  - alert: node_down
+    expr: up{job="node-exporter"} == 0
+    for: 2m
+    labels:
+      severity: warning
+      team: devops
+    annotations:
+      title: "Node Down Alert"
+      summary: "Job {{ $labels.job }} on {{ $labels.instance }} is down"
+      description: "Failed to scrape {{ $labels.job }} on {{ $labels.instance }} "
+      impact: "Node is unreachable"
+      action: "Try to access {{ $labels.instance }} and consult runbook"
+      dashboard: "https://grafana.localdns.xyz/d/rYdddlPWk/node-metrics?orgId=1&from=now-6h&to=now"
+      runbook: "https://wiki.localdns.xyz/books/runbooks/NodeDown"
+
+  # Alert for any instance that is unreachable for > 2 minutes.
+  - alert: service_down
+    expr: up == 0
+    for: 2m
+    labels:
+      severity: warning
+      team: devops
+    annotations:
+      title: "Service Down Alert"
+      summary: "Job {{ $labels.job }} on {{ $labels.instance }} is down"
+      description: "Service {{ $labels.job }} has been down for more than 2 minutes."
+      impact: "Service is unreachable"
+      action: "Try to access {{ $labels.instance }} and consult runbook"
+      dashboard: "https://grafana.localdns.xyz/d/rYdddlPWk/node-metrics?orgId=1&from=now-6h&to=now"
+      runbook: "https://wiki.localdns.xyz/books/runbooks/ServiceDown"
+
+  # alert on high load
+  - alert: host_high_cpu_load
+    #expr: node_load1 * on(instance) group_left(nodename) (node_uname_info) > 4
+    expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+    for: 5m
+    labels:
+      severity: warning
+      team: devops
+    annotations:
+      title: "High CPU Load"
+      summary: "Node {{ $labels.instance }} has High CPU Load"
+      description: "{{ $labels.job }} is under high load: ({{ $value }})"
+      impact: "Performance degrade"
+      action: "Try to access {{ $labels.instance }} and consult runbook"
+      dashboard: "https://monitoring.localdns.xyz/d/rYdddlPWk/node-metrics?orgId=1&from=now-6h&to=now"
+      runbook: "https://wiki.localdns.xyz/books/runbooks/HighLoad"
