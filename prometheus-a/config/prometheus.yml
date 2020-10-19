@@ -1,0 +1,156 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    aws_environment: prod
+    cluster: prometheus-eu
+    region: eu-west-1
+    replica: 0
+
+rule_files:
+  - '/etc/prometheus/rules/prometheus_alert.rules'
+  - '/etc/prometheus/rules/host_alert.rules'
+  - '/etc/prometheus/rules/ecs_alert.rules'
+  - '/etc/prometheus/rules/healthcheck_alert.rules'
+  - '/etc/prometheus/rules/deadmanswitch.rules'
+
+alerting:
+  # duplicated alerts with thanos
+  # https://github.com/thanos-io/thanos/blob/acb1cb03fd5ecf3e044a97642be50897db11c34f/tutorials/kubernetes-demo/manifests/prometheus-ha-sidecar.yaml#L179-L189
+  alert_relabel_configs:
+  - regex: replica
+    action: labeldrop
+  alertmanagers:
+  - scheme: http
+    static_configs:
+    - targets: ['alertmanager.localdns.xyz']
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['prometheus-a.localdns.xyz:9090', 'prometheus-b.localdns.xyz:9090']
+
+  # alertmanager
+  - job_name: 'alertmanager'
+    scrape_interval: 15s
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ['alertmanager.localdns.xyz']
+
+  # cadvisor
+  - job_name: container-metrics
+    scrape_interval: 15s
+    ec2_sd_configs:
+    - region: eu-west-1
+      port: 9100
+      filters:
+        - name: tag:PrometheusContainerScrape
+          values:
+            - Enabled
+    relabel_configs:
+    - source_labels: [__meta_ec2_private_ip]
+      replacement: '${1}:8080'
+      target_label: __address__
+    - source_labels: [__meta_ec2_tag_Name]
+      target_label: instance
+    - source_labels: [__meta_ec2_tag_ECSClusterName]
+      target_label: cluster_name
+    - source_labels: [__meta_ec2_tag_Environment]
+      target_label: environment
+
+  # node-exporter
+  - job_name: node-exporter
+    scrape_interval: 15s
+    ec2_sd_configs:
+    - region: eu-west-1
+      port: 9100
+      filters:
+        - name: tag:PrometheusScrape
+          values:
+            - Enabled
+    relabel_configs:
+    - source_labels: [__meta_ec2_private_ip]
+      replacement: '${1}:9100'
+      target_label: __address__
+    - source_labels: [__meta_ec2_tag_Name]
+      target_label: instance
+
+  # promtail-exporter
+  - job_name: promtail-exporter
+    scrape_interval: 15s
+    ec2_sd_configs:
+    - region: eu-west-1
+      port: 9100
+      filters:
+        - name: tag:PromtailScrape
+          values:
+            - Enabled
+    relabel_configs:
+    - source_labels: [__meta_ec2_private_ip]
+      replacement: '${1}:9080'
+      target_label: __address__
+    - source_labels: [__meta_ec2_tag_Name]
+      target_label: instance
+
+  # pushgateway-exporter
+  - job_name: pushgateway-exporter
+    scrape_interval: 15s
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+    - targets: ['pushgateway.localdns.xyz']
+
+  # deadmanswitch-exporter
+  - job_name: deadmanswitch-exporter
+    scrape_interval: 60s
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+    - targets: ['deadmanswitch-api.localdns.xyz']
+      labels:
+        cluster_name: 'aws-tools-ecs'
+        environment: 'tools'
+
+  # thanos-sidecar-exporter
+  - job_name: thanos-sidecar-exporter
+    scrape_interval: 15s
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+    - targets: ['prometheus-a.localdns.xyz:10902', 'prometheus-b.localdns.xyz:10902']
+
+  # thanos-store-api-exporter
+  - job_name: thanos-store-exporter
+    scrape_interval: 15s
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+    - targets: ['thanos-store-api.localdns.xyz:10902']
+
+  # thanos-compact-exporter
+  - job_name: thanos-compact-exporter
+    scrape_interval: 15s
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+    - targets: ['thanos-store-api.localdns.xyz:11902']
+
+  # blackbox-exporter
+  - job_name: blackbox-exporter
+    scrape_interval: 60s
+    scheme: https
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - https://api.localdns.xyz/healthcheck
+        - https://web.localdns.xyz/healthcheck
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter-tools.localdns.xyz
